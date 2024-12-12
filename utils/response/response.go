@@ -35,7 +35,8 @@ var EnmuHttptatus = struct {
 
 	SystemError HttpStatus // 系统异常
 
-	ParamError HttpStatus // 参数错误
+	ParamError    HttpStatus // 参数错误
+	PasswordError HttpStatus // 密码错误
 
 	ArticleTypeExists HttpStatus // 文章类型已存在
 }{
@@ -52,7 +53,8 @@ var EnmuHttptatus = struct {
 
 	SystemError: 10500,
 
-	ParamError: 10601,
+	ParamError:    10601,
+	PasswordError: 10602,
 
 	ArticleTypeExists: 10701,
 }
