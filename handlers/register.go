@@ -101,7 +101,7 @@ func Register(ctx *gin.Context) {
 }
 
 // 获取图形验证码
-func GetCaptcha(ctx *gin.Context) {
+func GetCaptchaCode(ctx *gin.Context) {
 	driver := base64Captcha.NewDriverDigit(80, 200, 5, 0.8, 75)
 	store := base64Captcha.DefaultMemStore
 
@@ -127,7 +127,7 @@ func GetCaptcha(ctx *gin.Context) {
 }
 
 // 发送注册验证码
-func SendEmail(ctx *gin.Context) {
+func SendVerifyCode(ctx *gin.Context) {
 
 	to := ctx.Query("email")
 

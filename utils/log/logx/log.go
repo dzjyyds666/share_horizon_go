@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -23,7 +24,7 @@ func GetLogger(filename string) *CustomLogger {
 		fmt.Printf("获取当前用户目录失败:%v", err)
 	}
 
-	filename = filepath.Join(homeDir, "logs", "full_time_teacher", filename+".log")
+	filename = filepath.Join(homeDir, "logs", filename+".log")
 
 	return &CustomLogger{
 		MaxSize:    10,
@@ -190,7 +191,8 @@ func (cl *CustomLogger) checkLogFile() {
 		}
 
 		// 备份旧文件
-		backupName := cl.Filename + "." + time.Now().Format("20060102150405")
+		names := strings.Split(cl.Filename, ".")
+		backupName := names[0] + "_" + time.Now().Format("20060102150405") + "." + names[1]
 		err = os.Rename(cl.Filename, backupName)
 		if err != nil {
 			fmt.Printf("Logx Error:%v", err)

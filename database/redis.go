@@ -18,6 +18,7 @@ const (
 	Redis_Captcha_Key           = "captcha:%s"
 	Redis_Verification_Code_Key = "verification_code:%s"
 	Redis_Register_Verify_Key   = "register_verify:%s"
+	Redis_Applay_Upload_Fid     = "upload_fid:%s"
 )
 
 // 初始化redis客户端

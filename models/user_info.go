@@ -31,9 +31,11 @@ func (UserInfo) TableName() string {
 var Role = struct {
 	User  string
 	Admin string
+	Guest string // 游客
 }{
 	User:  "user",
 	Admin: "admin",
+	Guest: "guest",
 }
 
 var Sex = struct {
