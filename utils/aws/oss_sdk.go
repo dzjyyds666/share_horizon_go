@@ -9,6 +9,7 @@ import (
 	"errors"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/gabriel-vasile/mimetype"
 	"io"
 	"os"
@@ -47,6 +48,7 @@ type UploadInfo struct {
 
 func (ui *UploadInfo) WithKey(keys ...string) *UploadInfo {
 	join := strings.Join(keys, "/")
+	join = join + "/" + aws.ToString(ui.Filename)
 	ui.Key = aws.String(join)
 	return ui
 }
@@ -188,6 +190,11 @@ func GetUploadInfoFromLocal(path string) (*UploadInfo, error) {
 	return ui, nil
 }
 
+type MultipartUploadInfo struct {
+	PartNumber    int32
+	ContentLenght int64
+}
+
 func GetS3Client(aliasName string) (*config.S3RegionConfig, error) {
 	for _, S3config := range config.S3GlobalConfig {
 		if S3config.AliasName == aliasName {
@@ -216,7 +223,7 @@ func PutFile(uploadInfo *UploadInfo, reader io.Reader, aliasName, bucket string)
 		ContentLength: uploadInfo.ContentLength,
 		ContentMD5:    uploadInfo.ContentMd5,
 		ContentType:   uploadInfo.ContentType,
-		Key:           aws.String(aws.ToString(uploadInfo.Fid) + "/" + aws.ToString(uploadInfo.Filename)),
+		Key:           uploadInfo.Key,
 		Metadata: map[string]string{
 			"fid":            aws.ToString(uploadInfo.Fid),
 			"Content-Length": strconv.FormatInt(aws.ToInt64(uploadInfo.ContentLength), 10),
@@ -238,4 +245,104 @@ func bucketIsExist(bucketName string, buckets []string) bool {
 		}
 	}
 	return false
+}
+
+type InitMultipartFileInfo struct {
+	Bucket      string `json:"bucket"`
+	DirectoryId string `json:"directory_id"`
+	StorageId   string `json:"storage_id"`
+	PartitionId string `json:"partition_id"`
+
+	Fid           string `json:"fid"`
+	FileName      string `json:"file_name"`
+	ContentLength int64  `json:"content_length"`
+	ContentType   string `json:"content_type"`
+	ContentMd5    string `json:"content_md5"`
+	Key           string `json:"key"`
+
+	UserId string `json:"user_id"`
+
+	UploadId string `json:"upload_id"`
+}
+
+// 初始化上传
+func InitMultUpload(bucket string, client *s3.Client, uploadInfo *UploadInfo) (*s3.CreateMultipartUploadOutput, error) {
+
+	multipartUploadInput := &s3.CreateMultipartUploadInput{
+		Bucket:      aws.String(bucket),
+		Key:         uploadInfo.Key,
+		ContentType: uploadInfo.ContentType,
+		Metadata: map[string]string{
+			"fid":            aws.ToString(uploadInfo.Fid),
+			"Content-Length": strconv.FormatInt(aws.ToInt64(uploadInfo.ContentLength), 10),
+			"Content-MD5":    aws.ToString(uploadInfo.ContentMd5),
+		},
+	}
+
+	ouput, err := client.CreateMultipartUpload(context.TODO(), multipartUploadInput)
+	if err != nil {
+		logx.GetLogger("SH").Errorf("OSS-sdk|CreateMultipartUpload|%v", err)
+		return nil, err
+	}
+
+	return ouput, nil
+}
+
+// 分片上传
+func MultipartUpload(uploadInfo MultipartUploadInfo, r io.Reader, completedParts []*types.CompletedPart, client *s3.Client, info InitMultipartFileInfo) (int32, error) {
+	part, err := client.UploadPart(context.TODO(), &s3.UploadPartInput{
+		Bucket:        aws.String(info.Bucket),
+		Key:           aws.String(info.Key),
+		UploadId:      aws.String(info.UploadId),
+		Body:          r,
+		PartNumber:    aws.Int32(uploadInfo.partNumber),
+		ContentLength: aws.Int64(uploadInfo.ContentLenght),
+	})
+	if err != nil {
+		logx.GetLogger("SH").Errorf("OSS-sdk|UploadPart|%v", err)
+		return uploadInfo.partNumber, err
+	}
+
+	completedParts = append(completedParts, &types.CompletedPart{
+		ETag:       part.ETag,
+		PartNumber: aws.Int32(uploadInfo.partNumber),
+	})
+	logx.GetLogger("SH").Infof("OSS-sdk|UploadPart:%v|SUCC", uploadInfo.partNumber)
+	return uploadInfo.partNumber, nil
+}
+
+// 完成分片上传
+func CompleteMultipartUpload(uploadInfo MultipartUploadInfo, completedParts []*types.CompletedPart, client *s3.Client) error {
+	var parts []types.CompletedPart
+	for _, part := range completedParts {
+		parts = append(parts, *part)
+	}
+
+	_, err := client.CompleteMultipartUpload(context.TODO(), &s3.CompleteMultipartUploadInput{
+		Bucket:   aws.String(uploadInfo.Bucket),
+		Key:      aws.String(uploadInfo.Key),
+		UploadId: aws.String(uploadInfo.UploadId),
+		MultipartUpload: &types.CompletedMultipartUpload{
+			Parts: parts,
+		},
+	})
+	if err != nil {
+		logx.GetLogger("SH").Errorf("OSS-sdk|CompleteMultipartUpload|%v", err)
+		return err
+	}
+	return nil
+}
+
+// 中断上传
+func AbortMultipartUpload(uploadInfo MultipartUploadInfo, client *s3.Client) error {
+	_, err := client.AbortMultipartUpload(context.TODO(), &s3.AbortMultipartUploadInput{
+		Bucket:   aws.String(uploadInfo.Bucket),
+		Key:      aws.String(uploadInfo.Key),
+		UploadId: aws.String(uploadInfo.UploadId),
+	})
+	if err != nil {
+		logx.GetLogger("SH").Errorf("OSS-sdk|AbortMultipartUploadError|%v", err)
+		return err
+	}
+	return nil
 }

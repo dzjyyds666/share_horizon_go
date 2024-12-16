@@ -19,6 +19,8 @@ const (
 	Redis_Verification_Code_Key = "verification_code:%s"
 	Redis_Register_Verify_Key   = "register_verify:%s"
 	Redis_Applay_Upload_Fid     = "upload_fid:%s"
+
+	Redis_Multipart_Upload_Key = "MultipartUpload:%s"
 )
 
 // 初始化redis客户端
