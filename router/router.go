@@ -23,10 +23,10 @@ func InitRouter(c *gin.Engine) {
 			public.GET("/getCaptcha", handlers.GetCaptchaCode)
 		}
 
-		test := v1.Group("/test")
-		{
-			test.GET("/getFileInfo", handlers.GetFileInfoTest)
-		}
+		//test := v1.Group("/test")
+		//{
+		//	//test.GET("/getFileInfo", handlers.GetFileInfoTest)
+		//}
 
 		auth := v1.Group("")
 		auth.Use(middlewares.TokenVerify())

@@ -13,7 +13,7 @@ func (e AwsError) Is(error AwsError) bool {
 	return false
 }
 
-var AwsErrorEnmu = struct {
+var AwsErrorEnum = struct {
 	BucketNotExist AwsError
 	ObjectNotExist AwsError
 	PutObjetFail   AwsError

@@ -17,45 +17,38 @@ import (
 	"strings"
 )
 
+// 上传文件信息  请求体传递
 type UploadInfo struct {
-	//AliasName     *string
-	//Bucket        *string
-	Fid           *string
-	ContentLength *int64
-	ContentMd5    *string
-	ContentType   *string
-	Filename      *string
-	Key           *string
+	Fid           string `json:"fid"`
+	FileName      string `json:"file_name"`
+	ContentLength int64  `json:"content_length"`
+	ContentType   string `json:"content_type"`
+	ContentMd5    string `json:"content_md5"`
+	Key           string `json:"key"`
 }
 
-//func (ui *UploadInfo) WithAliasName(aliasName string) *UploadInfo {
-//	if aliasName != "" {
-//		ui.AliasName = aws.String(aliasName)
-//	} else {
-//		logx.GetLogger("SH").Error("OSS-sdk|AliasName can not be empty")
-//	}
-//	return ui
-//}
-//
-//func (ui *UploadInfo) WithBucket(bucket string) *UploadInfo {
-//	if bucket != "" {
-//		ui.Bucket = aws.String(bucket)
-//	} else {
-//		logx.GetLogger("SH").Error("OSS-sdk|Bucket can not be empty")
-//	}
-//	return ui
-//}
+type MultipartUploadInfo struct {
+	PartNumber    int32
+	ContentLenght int64
+}
+
+// 通过请求头传递
+type RegionInfo struct {
+	BucketId    string `json:"bucket_id"`
+	DirectoryId string `json:"directory_id"`
+	StorageId   string `json:"storage_id"`
+}
 
 func (ui *UploadInfo) WithKey(keys ...string) *UploadInfo {
 	join := strings.Join(keys, "/")
-	join = join + "/" + aws.ToString(ui.Filename)
-	ui.Key = aws.String(join)
+	join = join + "/" + ui.FileName
+	ui.Key = join
 	return ui
 }
 
 func (ui *UploadInfo) WithFid(fid string) *UploadInfo {
 	if fid != "" {
-		ui.Fid = aws.String(fid)
+		ui.Fid = fid
 	} else {
 		logx.GetLogger("SH").Error("OSS-sdk|fid can not be empty")
 	}
@@ -64,7 +57,7 @@ func (ui *UploadInfo) WithFid(fid string) *UploadInfo {
 
 func (ui *UploadInfo) WithContentLength(contentLength int64) *UploadInfo {
 	if contentLength != 0 {
-		ui.ContentLength = aws.Int64(contentLength)
+		ui.ContentLength = contentLength
 	} else {
 		logx.GetLogger("SH").Error("OSS-sdk|contentLength can not be 0")
 	}
@@ -73,7 +66,7 @@ func (ui *UploadInfo) WithContentLength(contentLength int64) *UploadInfo {
 
 func (ui *UploadInfo) WithContentMd5(contentMd5 string) *UploadInfo {
 	if contentMd5 != "" {
-		ui.ContentMd5 = aws.String(contentMd5)
+		ui.ContentMd5 = contentMd5
 	} else {
 		logx.GetLogger("SH").Error("OSS-sdk|contentMd5 can not be empty")
 	}
@@ -82,7 +75,7 @@ func (ui *UploadInfo) WithContentMd5(contentMd5 string) *UploadInfo {
 
 func (ui *UploadInfo) WithContentType(contentType string) *UploadInfo {
 	if contentType != "" {
-		ui.ContentType = aws.String(contentType)
+		ui.ContentType = contentType
 	} else {
 		logx.GetLogger("SH").Error("OSS-sdk|contentType can not be empty")
 	}
@@ -91,7 +84,7 @@ func (ui *UploadInfo) WithContentType(contentType string) *UploadInfo {
 
 func (ui *UploadInfo) WithFilename(filename string) *UploadInfo {
 	if filename != "" {
-		ui.Filename = aws.String(filename)
+		ui.FileName = filename
 	} else {
 		logx.GetLogger("SH").Error("OSS-sdk|filename can not be empty")
 	}
@@ -130,10 +123,10 @@ func GetUploadInfoFromStream(reader io.ReadSeeker, fileName string) (*UploadInfo
 	hashBytes := hash.Sum(nil)
 	hashStr := base64.StdEncoding.EncodeToString(hashBytes)
 	return &UploadInfo{
-		ContentLength: aws.Int64(contentLength),
-		ContentMd5:    aws.String(hashStr),
-		ContentType:   aws.String(contentType.String()),
-		Filename:      aws.String(fileName),
+		ContentLength: contentLength,
+		ContentMd5:    hashStr,
+		ContentType:   contentType.String(),
+		FileName:      fileName,
 	}, nil
 
 }
@@ -147,8 +140,8 @@ func GetUploadInfoFromLocal(path string) (*UploadInfo, error) {
 		return nil, err
 	}
 	stat, _ := file.Stat()
-	ui.ContentLength = aws.Int64(stat.Size())
-	ui.Filename = aws.String(stat.Name())
+	ui.ContentLength = stat.Size()
+	ui.FileName = stat.Name()
 
 	// 读取文件头以确定内容类型
 	bytes := make([]byte, 512)
@@ -159,7 +152,7 @@ func GetUploadInfoFromLocal(path string) (*UploadInfo, error) {
 	}
 
 	contentType := mimetype.Detect(bytes)
-	ui.ContentType = aws.String(contentType.String())
+	ui.ContentType = contentType.String()
 
 	// 重置文件指针到文件开头
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
@@ -186,13 +179,8 @@ func GetUploadInfoFromLocal(path string) (*UploadInfo, error) {
 	}
 	hashBytes := hash.Sum(nil)
 	hashStr := base64.StdEncoding.EncodeToString(hashBytes)
-	ui.ContentMd5 = aws.String(hashStr)
+	ui.ContentMd5 = hashStr
 	return ui, nil
-}
-
-type MultipartUploadInfo struct {
-	PartNumber    int32
-	ContentLenght int64
 }
 
 func GetS3Client(aliasName string) (*config.S3RegionConfig, error) {
@@ -214,26 +202,26 @@ func PutFile(uploadInfo *UploadInfo, reader io.Reader, aliasName, bucket string)
 
 	if !bucketIsExist(bucket, S3Config.Buckets) {
 		logx.GetLogger("SH").Infof("Config|LoadS3Config|BucketNotExist|%s", bucket)
-		return false, AwsErrorEnmu.BucketNotExist
+		return false, AwsErrorEnum.BucketNotExist
 	}
 
 	_, err := S3Config.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Body:          reader,
 		Bucket:        aws.String(bucket),
-		ContentLength: uploadInfo.ContentLength,
-		ContentMD5:    uploadInfo.ContentMd5,
-		ContentType:   uploadInfo.ContentType,
-		Key:           uploadInfo.Key,
+		ContentLength: aws.Int64(uploadInfo.ContentLength),
+		ContentMD5:    aws.String(uploadInfo.ContentMd5),
+		ContentType:   aws.String(uploadInfo.ContentType),
+		Key:           aws.String(uploadInfo.Key),
 		Metadata: map[string]string{
-			"fid":            aws.ToString(uploadInfo.Fid),
-			"Content-Length": strconv.FormatInt(aws.ToInt64(uploadInfo.ContentLength), 10),
-			"Content-MD5":    aws.ToString(uploadInfo.ContentMd5),
+			"fid":            uploadInfo.Fid,
+			"Content-Length": strconv.FormatInt(uploadInfo.ContentLength, 10),
+			"Content-MD5":    uploadInfo.ContentMd5,
 		},
 	})
 
 	if err != nil {
 		logx.GetLogger("SH").Errorf("OSS-sdk|PutObjectError|%v", err)
-		return false, AwsErrorEnmu.PutObjetFail
+		return false, AwsErrorEnum.PutObjetFail
 	}
 	return true, nil
 }
@@ -247,35 +235,17 @@ func bucketIsExist(bucketName string, buckets []string) bool {
 	return false
 }
 
-type InitMultipartFileInfo struct {
-	Bucket      string `json:"bucket"`
-	DirectoryId string `json:"directory_id"`
-	StorageId   string `json:"storage_id"`
-	PartitionId string `json:"partition_id"`
-
-	Fid           string `json:"fid"`
-	FileName      string `json:"file_name"`
-	ContentLength int64  `json:"content_length"`
-	ContentType   string `json:"content_type"`
-	ContentMd5    string `json:"content_md5"`
-	Key           string `json:"key"`
-
-	UserId string `json:"user_id"`
-
-	UploadId string `json:"upload_id"`
-}
-
 // 初始化上传
-func InitMultUpload(bucket string, client *s3.Client, uploadInfo *UploadInfo) (*s3.CreateMultipartUploadOutput, error) {
+func InitMultUpload(bucket string, client *s3.Client, uploadInfo UploadInfo) (*s3.CreateMultipartUploadOutput, error) {
 
 	multipartUploadInput := &s3.CreateMultipartUploadInput{
 		Bucket:      aws.String(bucket),
-		Key:         uploadInfo.Key,
-		ContentType: uploadInfo.ContentType,
+		Key:         aws.String(uploadInfo.Key),
+		ContentType: aws.String(uploadInfo.ContentType),
 		Metadata: map[string]string{
-			"fid":            aws.ToString(uploadInfo.Fid),
-			"Content-Length": strconv.FormatInt(aws.ToInt64(uploadInfo.ContentLength), 10),
-			"Content-MD5":    aws.ToString(uploadInfo.ContentMd5),
+			"fid":            uploadInfo.Fid,
+			"Content-Length": strconv.FormatInt(uploadInfo.ContentLength, 10),
+			"Content-MD5":    uploadInfo.ContentMd5,
 		},
 	}
 
@@ -289,39 +259,35 @@ func InitMultUpload(bucket string, client *s3.Client, uploadInfo *UploadInfo) (*
 }
 
 // 分片上传
-func MultipartUpload(uploadInfo MultipartUploadInfo, r io.Reader, completedParts []*types.CompletedPart, client *s3.Client, info InitMultipartFileInfo) (int32, error) {
+func MultipartUpload(uploadInfo MultipartUploadInfo, r io.Reader, client *s3.Client, region RegionInfo, info UploadInfo, uploadId string) (string, int32, error) {
 	part, err := client.UploadPart(context.TODO(), &s3.UploadPartInput{
-		Bucket:        aws.String(info.Bucket),
+		Bucket:        aws.String(region.BucketId),
 		Key:           aws.String(info.Key),
-		UploadId:      aws.String(info.UploadId),
+		UploadId:      aws.String(uploadId),
 		Body:          r,
-		PartNumber:    aws.Int32(uploadInfo.partNumber),
+		PartNumber:    aws.Int32(uploadInfo.PartNumber),
 		ContentLength: aws.Int64(uploadInfo.ContentLenght),
 	})
 	if err != nil {
 		logx.GetLogger("SH").Errorf("OSS-sdk|UploadPart|%v", err)
-		return uploadInfo.partNumber, err
+		return "", uploadInfo.PartNumber, err
 	}
 
-	completedParts = append(completedParts, &types.CompletedPart{
-		ETag:       part.ETag,
-		PartNumber: aws.Int32(uploadInfo.partNumber),
-	})
-	logx.GetLogger("SH").Infof("OSS-sdk|UploadPart:%v|SUCC", uploadInfo.partNumber)
-	return uploadInfo.partNumber, nil
+	logx.GetLogger("SH").Infof("OSS-sdk|UploadPart:%v|SUCC", uploadInfo.PartNumber)
+	return aws.ToString(part.ETag), uploadInfo.PartNumber, nil
 }
 
 // 完成分片上传
-func CompleteMultipartUpload(uploadInfo MultipartUploadInfo, completedParts []*types.CompletedPart, client *s3.Client) error {
+func CompleteMultipartUpload(completedParts []*types.CompletedPart, client *s3.Client, key, bucket, uploadId string) error {
 	var parts []types.CompletedPart
 	for _, part := range completedParts {
 		parts = append(parts, *part)
 	}
 
 	_, err := client.CompleteMultipartUpload(context.TODO(), &s3.CompleteMultipartUploadInput{
-		Bucket:   aws.String(uploadInfo.Bucket),
-		Key:      aws.String(uploadInfo.Key),
-		UploadId: aws.String(uploadInfo.UploadId),
+		Bucket:   aws.String(bucket),
+		Key:      aws.String(key),
+		UploadId: aws.String(uploadId),
 		MultipartUpload: &types.CompletedMultipartUpload{
 			Parts: parts,
 		},
@@ -334,11 +300,11 @@ func CompleteMultipartUpload(uploadInfo MultipartUploadInfo, completedParts []*t
 }
 
 // 中断上传
-func AbortMultipartUpload(uploadInfo MultipartUploadInfo, client *s3.Client) error {
+func AbortMultipartUpload(client *s3.Client, bucket, key, uploadId string) error {
 	_, err := client.AbortMultipartUpload(context.TODO(), &s3.AbortMultipartUploadInput{
-		Bucket:   aws.String(uploadInfo.Bucket),
-		Key:      aws.String(uploadInfo.Key),
-		UploadId: aws.String(uploadInfo.UploadId),
+		Bucket:   aws.String(bucket),
+		Key:      aws.String(key),
+		UploadId: aws.String(uploadId),
 	})
 	if err != nil {
 		logx.GetLogger("SH").Errorf("OSS-sdk|AbortMultipartUploadError|%v", err)

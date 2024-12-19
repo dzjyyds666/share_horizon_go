@@ -11,8 +11,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	s3aws "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"io"
@@ -93,30 +95,24 @@ func ApplayUpload(ctx *gin.Context) {
 		ctx.Abort()
 	}
 
-	storageId := ctx.GetHeader("OssX-storageId")
-	if storageId == "" {
+	storageId := ctx.GetHeader(aws.OssHeaders.StorageId.ToString())
+	if len(storageId) <= 0 {
 		storageId = "minio-oss"
 	}
 
-	bucket := ctx.GetHeader("OssX-bucket")
-	if bucket == "" {
+	bucket := ctx.GetHeader(aws.OssHeaders.BucketId.ToString())
+	if len(bucket) <= 0 {
 		bucket = "oss-file-dev"
 	}
 
-	// 获取partitionId
-	partitionId := ctx.GetHeader("OssX-partitionId")
-	if partitionId == "" {
-		partitionId = "default"
-	}
-
 	// 获取文件夹id
-	directoryId := ctx.GetHeader("OssX-directoryId")
-	if directoryId == "" {
-		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "获取文件夹id失败", nil))
+	directoryId := ctx.GetHeader(aws.OssHeaders.DirectoryId.ToString())
+	if len(directoryId) <= 0 {
+		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "directoryId不可以为空", nil))
 		ctx.Abort()
 	}
 
-	tmp := fmt.Sprintf("%s-%s-%s-%s", userId, partitionId, directoryId, time.Now().Format("20060102150405"))
+	tmp := fmt.Sprintf("%s-%s-%s", userId, directoryId, time.Now().Format("20060102150405"))
 
 	key := generateKey256()
 	fid, err := Excrypt([]byte(tmp), []byte(key))
@@ -127,7 +123,6 @@ func ApplayUpload(ctx *gin.Context) {
 
 	applayUploadInfo := &ApplayUploadInfo{
 		StorageId:   storageId,
-		PartitionId: partitionId,
 		DirectoryId: directoryId,
 		UserId:      userInfo.UserID,
 		Bucket:      bucket,
@@ -212,15 +207,17 @@ func PutFile(ctx *gin.Context) {
 
 // 初始化分片上传
 func InitMultipartFile(ctx *gin.Context) {
-	var initFileInfo *aws.UploadInfo
-	err := ctx.ShouldBindJSON(&initFileInfo)
+
+	var uploadInfo aws.UploadInfo
+	err := ctx.ShouldBindJSON(&uploadInfo)
 	if err != nil {
 		logx.GetLogger("SH").Errorf("Handler|InitMultipartFile|ParamsError|%v", err)
 		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.ParamError, "参数错误", nil))
+		ctx.Abort()
 	}
 
 	// 查询redis是否存在fid信息
-	result, err := database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Applay_Upload_Fid, initFileInfo.Fid)).Result()
+	result, err := database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Applay_Upload_Fid, uploadInfo.Fid)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			logx.GetLogger("SH").Errorf("Handler|InitMultipartFile|FidInfoNotExistError|%v", err)
@@ -246,33 +243,13 @@ func InitMultipartFile(ctx *gin.Context) {
 		panic(err)
 	}
 
-	initFileInfo.WithKey(applayUpload.PartitionId, applayUpload.DirectoryId, applayUpload.UserId)
+	uploadInfo.WithKey(applayUpload.PartitionId, applayUpload.DirectoryId, applayUpload.UserId)
 
-	upload, err := aws.InitMultUpload(applayUpload.Bucket, s3Client.S3Client, initFileInfo)
+	upload, err := aws.InitMultUpload(applayUpload.Bucket, s3Client.S3Client, uploadInfo)
 	if err != nil {
 		logx.GetLogger("SH").Errorf("Handler|InitMultipartFile|InitMultUploadError|%v", err)
 		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "初始化分片上传失败", err))
 	}
-	var initInfo aws.InitMultipartFileInfo
-	// 把文件信息存入redis中
-	initInfo.Bucket = applayUpload.Bucket
-	initInfo.StorageId = applayUpload.StorageId
-	initInfo.UserId = applayUpload.UserId
-	initInfo.PartitionId = applayUpload.PartitionId
-	initInfo.DirectoryId = applayUpload.DirectoryId
-
-	initInfo.Key = s3aws.ToString(initFileInfo.Key)
-	initInfo.ContentLength = s3aws.ToInt64(initFileInfo.ContentLength)
-	initInfo.ContentType = s3aws.ToString(initFileInfo.ContentType)
-	initInfo.ContentMd5 = s3aws.ToString(initFileInfo.ContentMd5)
-	initInfo.Fid = s3aws.ToString(initFileInfo.Fid)
-
-	initInfo.UploadId = s3aws.ToString(upload.UploadId)
-	initInfo.FileName = s3aws.ToString(initFileInfo.Filename)
-
-	rawData, _ := json.Marshal(&initInfo)
-
-	database.RDB.Set(ctx, fmt.Sprintf(database.Redis_Multipart_Upload_Key, s3aws.ToString(initFileInfo.Fid)), rawData, 0)
 
 	ctx.JSON(http.StatusOK, response.NewResult(response.EnmuHttptatus.RequestSuccess, "初始化分片上传成功", map[string]string{
 		"upload_id": s3aws.ToString(upload.UploadId),
@@ -280,41 +257,40 @@ func InitMultipartFile(ctx *gin.Context) {
 }
 
 func MultipartUploadFile(ctx *gin.Context) {
+	var uploadInfo aws.UploadInfo
+	err := ctx.ShouldBindJSON(&uploadInfo)
+	if err != nil {
+		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|ParamsError|%v", err)
+		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.ParamError, "参数错误", nil))
+		ctx.Abort()
+	}
+
+	// 查询是否fid是否存在
+	err = database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Applay_Upload_Fid, uploadInfo.Fid)).Err()
+	if errors.Is(err, redis.Nil) {
+		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|FidInfoNotExistError|%v", err)
+		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "Fid过期，请重新申请", nil))
+		ctx.Abort()
+	}
+
+	if err != nil {
+		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|GetFidInfoFromRedisError|%v", err)
+		panic(err)
+	}
+
 	partBytes, err := ctx.FormFile("part_bytes")
 	if err != nil {
 		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|GetPartBytesError|%v", err)
 		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "获取分片失败", nil))
 	}
 
-	fid := ctx.PostForm("fid")
-	if fid == "" {
-		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|FidCanNotBeEmpty|%v", err)
-		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "Fid不能为空", nil))
-		ctx.Abort()
-	}
+	bucketId := ctx.GetHeader(aws.OssHeaders.BucketId.ToString())
+	directoryId := ctx.GetHeader(aws.OssHeaders.DirectoryId.ToString())
+	storageId := ctx.GetHeader(aws.OssHeaders.StorageId.ToString())
+	uploadId := ctx.GetHeader(aws.OssHeaders.UploadId.ToString())
 
-	partNumber := ctx.PostForm("part_number")
-	if partNumber == "" {
-		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|PartNumberCanNotBeEmpty|%v", err)
-		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "分片编号不能为空", nil))
-		ctx.Abort()
-	}
-
-	contentLength := ctx.PostForm("content_length")
-	if contentLength == "" {
-		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|ContentLengthCanNotBeEmpty|%v", err)
-		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "分片长度不能为空", nil))
-		ctx.Abort()
-	}
-
-	initUploadInfo, err := database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Multipart_Upload_Key, fid)).Result()
-	if err != nil {
-		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|GetMultipartUploadInfoFromRedisError|%v", err)
-		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "获取分片上传信息失败", nil))
-		ctx.Abort()
-	}
-
-	logx.GetLogger("SH").Infof("Handler|MultipartUploadFile|GetMultipartUploadInfoFromRedisSuccess|%v", initUploadInfo)
+	contentLength := ctx.Query("content_length")
+	partNumber := ctx.Query("part_number")
 
 	file, err := partBytes.Open()
 	if err != nil {
@@ -329,12 +305,42 @@ func MultipartUploadFile(ctx *gin.Context) {
 	multipartUploadInfo.ContentLenght = int64(length)
 	multipartUploadInfo.PartNumber = int32(number)
 
-	//client,err := aws.GetS3Client(initUploadInfo)
-	//if err!=nil{
-	//	logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|GetS3ClientError|%v", err)
-	//	ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "获取s3客户端失败", nil))
-	//}
+	client, err := aws.GetS3Client(storageId)
+	if err != nil {
+		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|GetS3ClientError|%v", err)
+		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "获取s3客户端失败", nil))
+	}
 
-	//aws.MultipartUpload(multipartUploadInfo,file,client.S3Client,initUploadInfo)
+	PartEtag, PartNumber, err := aws.MultipartUpload(
+		multipartUploadInfo, file, client.S3Client,
+		aws.RegionInfo{
+			BucketId:    bucketId,
+			DirectoryId: directoryId,
+			StorageId:   storageId,
+		},
+		uploadInfo, uploadId)
+	if err != nil {
+		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|MultipartUploadError|%v", err)
+		ctx.JSON(http.StatusBadRequest, response.NewResult(response.EnmuHttptatus.RequestFail, "分片上传失败", map[string]int32{
+			"part_number": PartNumber,
+		}))
+		ctx.Abort()
+	}
 
+	part := types.CompletedPart{ETag: s3aws.String(PartEtag), PartNumber: s3aws.Int32(PartNumber)}
+	rawData, err := json.Marshal(part)
+	if err != nil {
+		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|MarshalError|%v", err)
+		panic(err)
+	}
+
+	// 存入redis
+	err = database.RDB.Set(ctx, fmt.Sprintf(database.Redis_Multipart_Upload_Key, uploadId, PartNumber), rawData, 0).Err()
+	if err != nil {
+		logx.GetLogger("SH").Errorf("Handler|MultipartUploadFile|SetMultipartUploadInfoToRedisError|%v", err)
+		panic(err)
+	}
+	ctx.JSON(http.StatusOK, response.NewResult(response.EnmuHttptatus.RequestSuccess, "分片上传成功", map[string]int32{
+		"part_number": PartNumber,
+	}))
 }
