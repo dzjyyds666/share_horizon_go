@@ -25,6 +25,7 @@ type UploadInfo struct {
 	ContentType   string `json:"content_type"`
 	ContentMd5    string `json:"content_md5"`
 	Key           string `json:"key"`
+	PartSize      int64  `json:"part_size"`
 }
 
 type MultipartUploadInfo struct {
@@ -259,10 +260,10 @@ func InitMultUpload(bucket string, client *s3.Client, uploadInfo UploadInfo) (*s
 }
 
 // 分片上传
-func MultipartUpload(uploadInfo MultipartUploadInfo, r io.Reader, client *s3.Client, region RegionInfo, info UploadInfo, uploadId string) (string, int32, error) {
+func MultipartUpload(uploadInfo MultipartUploadInfo, r io.Reader, client *s3.Client, region RegionInfo, key, uploadId string) (string, int32, error) {
 	part, err := client.UploadPart(context.TODO(), &s3.UploadPartInput{
 		Bucket:        aws.String(region.BucketId),
-		Key:           aws.String(info.Key),
+		Key:           aws.String(key),
 		UploadId:      aws.String(uploadId),
 		Body:          r,
 		PartNumber:    aws.Int32(uploadInfo.PartNumber),
@@ -312,3 +313,8 @@ func AbortMultipartUpload(client *s3.Client, bucket, key, uploadId string) error
 	}
 	return nil
 }
+
+//// 生成签名 签名信息包括StorageId、BucketName、DirectoryId、FileName、ExpireTime
+//func genSignature(storageId, bucketName, directoryId, fileName string, expireTime int64) (string, error) {
+//
+//}

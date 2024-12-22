@@ -41,7 +41,7 @@ func LoginByPass(ctx *gin.Context) {
 	}
 
 	// 验证验证码
-	getCaptchaCode := database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Captcha_Key, logininfo.CaptchaId))
+	getCaptchaCode := database.RDB[0].Get(ctx, fmt.Sprintf(database.Redis_Captcha_Key, logininfo.CaptchaId))
 
 	if getCaptchaCode.Val() != logininfo.CaptchaCode {
 		logx.GetLogger("SH").Errorf("Handler|LoginByPass|CaptchaError|%v", err)
@@ -62,7 +62,7 @@ func LoginByPass(ctx *gin.Context) {
 	// 把用户token存入redis
 	token := jwt.NewJWTUtils().CreateJWT(userInfo.UserID)
 	tokenExpirationTime := time.Duration(config.GlobalConfig.JWT.ExpirationTime) * time.Hour
-	err = database.RDB.Set(ctx, fmt.Sprintf(database.Redis_Token_Key, userInfo.UserID), token, tokenExpirationTime).Err()
+	err = database.RDB[0].Set(ctx, fmt.Sprintf(database.Redis_Token_Key, userInfo.UserID), token, tokenExpirationTime).Err()
 	if err != nil {
 		logx.GetLogger("SH").Errorf("Handler|LoginByVerfiyCode|RedisSetError|%v", err)
 		panic(err)
@@ -102,7 +102,7 @@ func LoginByVerfiyCode(ctx *gin.Context) {
 	}
 
 	// 验证验证码
-	getCaptchaCode := database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Captcha_Key, logininfo.CaptchaId))
+	getCaptchaCode := database.RDB[0].Get(ctx, fmt.Sprintf(database.Redis_Captcha_Key, logininfo.CaptchaId))
 
 	if getCaptchaCode.Val() != logininfo.CaptchaCode {
 		logx.GetLogger("SH").Errorf("Handler|LoginByPass|CaptchaError|%v", err)
@@ -111,7 +111,7 @@ func LoginByVerfiyCode(ctx *gin.Context) {
 	}
 
 	// 验证邮箱验证码
-	result := database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Verification_Code_Key, logininfo.Email))
+	result := database.RDB[0].Get(ctx, fmt.Sprintf(database.Redis_Verification_Code_Key, logininfo.Email))
 	if result.Val() != logininfo.VerifyCode {
 		logx.GetLogger("SH").Errorf("Handler|LoginByVerfiyCode|VerifyCodeError|%v", err)
 		ctx.JSON(http.StatusOK, response.NewResult(response.EnmuHttptatus.ParamError, "邮箱验证码错误", nil))
@@ -130,7 +130,7 @@ func LoginByVerfiyCode(ctx *gin.Context) {
 	// 把用户token存入redis
 	token := jwt.NewJWTUtils().CreateJWT(userInfo.UserID)
 	tokenExpirationTime := time.Duration(config.GlobalConfig.JWT.ExpirationTime) * time.Hour
-	err = database.RDB.Set(ctx, fmt.Sprintf(database.Redis_Token_Key, userInfo.UserID), token, tokenExpirationTime).Err()
+	err = database.RDB[0].Set(ctx, fmt.Sprintf(database.Redis_Token_Key, userInfo.UserID), token, tokenExpirationTime).Err()
 	if err != nil {
 		logx.GetLogger("SH").Errorf("Handler|LoginByVerfiyCode|RedisSetError|%v", err)
 		panic(err)
@@ -162,7 +162,7 @@ func LoginByVerfiyCode(ctx *gin.Context) {
 func Logout(ctx *gin.Context) {
 
 	// 删除redis的token信息
-	err := database.RDB.Del(ctx, fmt.Sprintf(database.Redis_Token_Key, ctx.GetString("user_id"))).Err()
+	err := database.RDB[0].Del(ctx, fmt.Sprintf(database.Redis_Token_Key, ctx.GetString("user_id"))).Err()
 	if err != nil {
 		logx.GetLogger("SH").Errorf("Handler|Logout|RedisDelError|%v", err)
 		ctx.JSON(http.StatusOK, response.NewResult(response.EnmuHttptatus.SystemError, "系统异常", nil))

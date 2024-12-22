@@ -1,5 +1,22 @@
 basePath: /api/v1
 definitions:
+  aws.UploadInfo:
+    properties:
+      content_length:
+        type: integer
+      content_md5:
+        type: string
+      content_type:
+        type: string
+      fid:
+        type: string
+      file_name:
+        type: string
+      key:
+        type: string
+      part_size:
+        type: integer
+    type: object
   handlers.loginInfo:
     properties:
       captcha_code:
@@ -28,7 +45,7 @@ definitions:
       time:
         type: string
     type: object
-host: localhost:8888
+host: http://localhost:8888
 info:
   contact:
     email: duaaron519@gmail.com
@@ -58,4 +75,162 @@ paths:
       summary: 用户登录
       tags:
       - 登录
+  /upload/applayUpload:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 存储ID
+        in: header
+        name: X-Oss-StorageId
+        required: true
+        type: string
+      - description: Bucket名称
+        in: header
+        name: X-Oss-BucketId
+        required: true
+        type: string
+      - description: 目录ID
+        in: header
+        name: X-Oss-DirectoryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            $ref: '#/definitions/response.Result'
+      summary: 申请上传文件
+      tags:
+      - 文件上传
+  /upload/initMultipartUpload:
+    post:
+      consumes:
+      - application/json
+      description: 初始化分片上传
+      parameters:
+      - description: uploadInfo
+        in: body
+        name: uploadInfo
+        required: true
+        schema:
+          $ref: '#/definitions/aws.UploadInfo'
+      produces:
+      - application/json
+      responses: {}
+      summary: 初始化分片上传
+      tags:
+      - 文件上传
+  /upload/multipart/{fid}:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 分片上传
+      parameters:
+      - description: fid
+        in: path
+        name: fid
+        required: true
+        type: string
+      - description: part_bytes
+        in: formData
+        name: part_bytes
+        required: true
+        type: file
+      - description: upload_id
+        in: header
+        name: X-Oss-UploadId
+        required: true
+        type: string
+      - description: upload_key
+        in: header
+        name: X-Oss-UploadKey
+        required: true
+        type: string
+      - description: content_length
+        in: query
+        name: content_length
+        required: true
+        type: string
+      - description: part_number
+        in: query
+        name: part_number
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: 分片上传
+      tags:
+      - 文件上传
+  /upload/multipart/abort/{fid}:
+    post:
+      description: 中断分片上传
+      parameters:
+      - description: upload_id
+        in: header
+        name: X-Oss-UploadId
+        required: true
+        type: string
+      - description: fid
+        in: path
+        name: fid
+        required: true
+        type: string
+      responses: {}
+      summary: 中断分片上传
+      tags:
+      - 文件上传
+  /upload/multipart/complete/{fid}:
+    post:
+      description: 完成分片上传
+      parameters:
+      - description: upload_id
+        in: header
+        name: X-Oss-UploadId
+        required: true
+        type: string
+      - description: upload_key
+        in: header
+        name: X-Oss-UploadKey
+        required: true
+        type: string
+      - description: fid
+        in: path
+        name: fid
+        required: true
+        type: string
+      responses: {}
+      summary: 完成分片上传
+      tags:
+      - 文件上传
+  /upload/putFile/{fid}:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 直接上传文件
+      parameters:
+      - description: fid
+        in: path
+        name: fid
+        required: true
+        type: string
+      - description: file_name
+        in: formData
+        name: file_name
+        required: true
+        type: string
+      - description: file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses: {}
+      summary: 上传文件
+      tags:
+      - 文件上传
 swagger: "2.0"

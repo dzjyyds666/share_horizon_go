@@ -49,7 +49,7 @@ func Register(ctx *gin.Context) {
 		return
 	}
 
-	get := database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Captcha_Key, registerinfo.CaptchaId))
+	get := database.RDB[0].Get(ctx, fmt.Sprintf(database.Redis_Captcha_Key, registerinfo.CaptchaId))
 	if get.Err() != nil {
 		logx.GetLogger("SH").Errorf("Handler|Register|GetCaptchaError|%v", err)
 		panic(get.Err())
@@ -60,7 +60,7 @@ func Register(ctx *gin.Context) {
 		return
 	}
 
-	get = database.RDB.Get(ctx, fmt.Sprintf(database.Redis_Register_Verify_Key, registerinfo.Email))
+	get = database.RDB[0].Get(ctx, fmt.Sprintf(database.Redis_Register_Verify_Key, registerinfo.Email))
 	if get.Err() != nil {
 		logx.GetLogger("SH").Errorf("Handler|Register|GetVerifyCodeError|%v", err)
 		panic(get.Err())
@@ -114,7 +114,7 @@ func GetCaptchaCode(ctx *gin.Context) {
 	}
 
 	// 使用redis存取验证码
-	err = database.RDB.Set(ctx, fmt.Sprintf(database.Redis_Captcha_Key, id), answer, time.Minute*5).Err()
+	err = database.RDB[0].Set(ctx, fmt.Sprintf(database.Redis_Captcha_Key, id), answer, time.Minute*5).Err()
 
 	if err != nil {
 		panic("redis存取验证码失败" + err.Error())
@@ -135,7 +135,7 @@ func SendVerifyCode(ctx *gin.Context) {
 	verificationCode := GenerateVerificationCode(6)
 
 	// 把验证码存入redis
-	ok, err := database.RDB.SetNX(ctx, fmt.Sprintf(database.Redis_Verification_Code_Key, to), verificationCode, time.Minute*5).Result()
+	ok, err := database.RDB[0].SetNX(ctx, fmt.Sprintf(database.Redis_Verification_Code_Key, to), verificationCode, time.Minute*5).Result()
 	if err != nil {
 		panic("redis存取验证码失败" + err.Error())
 	}

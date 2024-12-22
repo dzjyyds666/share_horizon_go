@@ -31,7 +31,7 @@ func TokenVerify() gin.HandlerFunc {
 		userId := claims.UserId
 
 		// 从redis中获取token
-		redisResult := database.RDB.Get(c.Request.Context(), fmt.Sprintf(database.Redis_Token_Key, userId))
+		redisResult := database.RDB[0].Get(c.Request.Context(), fmt.Sprintf(database.Redis_Token_Key, userId))
 		err = redisResult.Err()
 		if err != nil {
 			if err == redis.Nil {

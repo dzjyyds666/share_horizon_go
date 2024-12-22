@@ -3,15 +3,14 @@ package database
 import (
 	"ShareHorizon/config"
 	"ShareHorizon/utils/log/logx"
+	"context"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"os"
-
-	"context"
 )
 
 // 全局redis客户端
-var RDB *redis.Client
+var RDB []*redis.Client
 
 const (
 	Redis_Token_Key             = "token:%s"
@@ -26,17 +25,19 @@ const (
 // 初始化redis客户端
 func InitRedis() {
 	rdb := config.GlobalConfig.Redis
-	RDB = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", rdb.Host, rdb.Port),
-		Password: rdb.Password,
-		DB:       rdb.DB,
-	})
-
-	_, err := RDB.Ping(context.Background()).Result()
-	if err != nil {
-		logx.GetLogger("SH").Errorf("Database|RedisConnect|FAIL|%v", err)
-		os.Exit(1)
-	} else {
-		logx.GetLogger("SH").Info("Database|RedisConnect|SUCC")
+	for _, db := range rdb.DB {
+		client := redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%s", rdb.Host, rdb.Port),
+			Password: rdb.Password,
+			DB:       db,
+		})
+		_, err := client.Ping(context.Background()).Result()
+		if err != nil {
+			logx.GetLogger("SH").Errorf("Database|RedisConnect|FAIL|%v|%v", db, err)
+			os.Exit(1)
+		} else {
+			RDB = append(RDB, client)
+		}
 	}
+	logx.GetLogger("SH").Info("Database|RedisConnect|SUCC")
 }

@@ -11,10 +11,12 @@ var OssHeaders = struct {
 	DirectoryId OssHeadType
 	BucketId    OssHeadType
 
-	UploadId OssHeadType
+	UploadId  OssHeadType
+	UploadKey OssHeadType
 }{
 	StorageId:   "X-Oss-StorageId",
 	DirectoryId: "X-Oss-DirectoryId",
 	BucketId:    "X-Oss-BucketId",
 	UploadId:    "X-Oss-UploadId",
+	UploadKey:   "X-Oss-UploadKey",
 }

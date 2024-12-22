@@ -33,6 +33,12 @@ func InitRouter(c *gin.Engine) {
 		{
 			auth.GET("/logout", handlers.Logout)
 			auth.GET("/applayUpload", handlers.ApplayUpload)
+			auth.POST("/upload/applayUpload", handlers.ApplayUpload)
+			auth.POST("/upload/putFile/:fid", handlers.PutFile)
+			auth.POST("/upload/initMultipartUpload", handlers.InitMultipartFile)
+			auth.POST("/upload/multipart/:fid", handlers.MultipartUploadFile)
+			auth.POST("/upload/multipart/complete/:fid", handlers.CompleteMultipartUpload)
+			auth.POST("/upload/multipart/abort/:fid", handlers.AbortMultipartUpload)
 		}
 	}
 

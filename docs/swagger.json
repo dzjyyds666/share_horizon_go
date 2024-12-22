@@ -9,7 +9,7 @@
         },
         "version": "0.1.0"
     },
-    "host": "localhost:8888",
+    "host": "http://localhost:8888",
     "basePath": "/api/v1",
     "paths": {
         "/login": {
@@ -44,9 +44,265 @@
                     }
                 }
             }
+        },
+        "/upload/applayUpload": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件上传"
+                ],
+                "summary": "申请上传文件",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "存储ID",
+                        "name": "X-Oss-StorageId",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bucket名称",
+                        "name": "X-Oss-BucketId",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "目录ID",
+                        "name": "X-Oss-DirectoryId",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Result"
+                        }
+                    }
+                }
+            }
+        },
+        "/upload/initMultipartUpload": {
+            "post": {
+                "description": "初始化分片上传",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件上传"
+                ],
+                "summary": "初始化分片上传",
+                "parameters": [
+                    {
+                        "description": "uploadInfo",
+                        "name": "uploadInfo",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/aws.UploadInfo"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/upload/multipart/abort/{fid}": {
+            "post": {
+                "description": "中断分片上传",
+                "tags": [
+                    "文件上传"
+                ],
+                "summary": "中断分片上传",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "upload_id",
+                        "name": "X-Oss-UploadId",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "fid",
+                        "name": "fid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/upload/multipart/complete/{fid}": {
+            "post": {
+                "description": "完成分片上传",
+                "tags": [
+                    "文件上传"
+                ],
+                "summary": "完成分片上传",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "upload_id",
+                        "name": "X-Oss-UploadId",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "upload_key",
+                        "name": "X-Oss-UploadKey",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "fid",
+                        "name": "fid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/upload/multipart/{fid}": {
+            "post": {
+                "description": "分片上传",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件上传"
+                ],
+                "summary": "分片上传",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "fid",
+                        "name": "fid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "part_bytes",
+                        "name": "part_bytes",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "upload_id",
+                        "name": "X-Oss-UploadId",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "upload_key",
+                        "name": "X-Oss-UploadKey",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "content_length",
+                        "name": "content_length",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "part_number",
+                        "name": "part_number",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/upload/putFile/{fid}": {
+            "post": {
+                "description": "直接上传文件",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件上传"
+                ],
+                "summary": "上传文件",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "fid",
+                        "name": "fid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "file_name",
+                        "name": "file_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
         }
     },
     "definitions": {
+        "aws.UploadInfo": {
+            "type": "object",
+            "properties": {
+                "content_length": {
+                    "type": "integer"
+                },
+                "content_md5": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "fid": {
+                    "type": "string"
+                },
+                "file_name": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "part_size": {
+                    "type": "integer"
+                }
+            }
+        },
         "handlers.loginInfo": {
             "type": "object",
             "properties": {
