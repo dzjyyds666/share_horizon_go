@@ -13,14 +13,14 @@ import (
 	"strings"
 )
 
-// @Summary 获取电影信息
-// @Description 获取电影信息
+// GetMovieInfoPage
+// @Summary 分页获取电影信息
 // @Tags 电影
 // @Accept json
 // @Produce json
 // @Param page query string false "页码"
 // @Param limit query string false "每页数量"
-// Router /movie/list [get]
+// @Router /movie/list [get]
 func GetMovieInfoPage(ctx *gin.Context) {
 	page := ctx.Query("page")
 	if len(page) <= 0 {
@@ -45,13 +45,14 @@ func GetMovieInfoPage(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.NewResult(response.EnmuHttptatus.RequestFail, "获取成功", movies))
 }
 
+// GetMovieInfo
 // @Summary 获取电影信息
 // @Description 获取电影信息
 // @Tags 电影
 // @Accept json
 // @Produce json
 // @Param movie_id path string true "电影ID"
-// Router /movie/info/{movie_id} [get]
+// @Router /movie/info/{movie_id} [get]
 func GetMovieInfo(ctx *gin.Context) {
 	movieId := ctx.Param("movie_id")
 	var movie models.MovieInfo
@@ -74,6 +75,7 @@ type upload_movie_info struct {
 	TypeId             []string `json:"type_id"`             // 类型数组
 }
 
+// UploadMovieInfo
 // @Summary 上传电影信息
 // @Description 上传电影信息
 // @Tags 电影
@@ -81,7 +83,6 @@ type upload_movie_info struct {
 // @Produce json
 // @Params body upload_movie_info true "上传电影信息"
 // @Router /movie/upload [post]
-
 func UploadMovieInfo(ctx *gin.Context) {
 	var movie upload_movie_info
 	err := ctx.ShouldBindJSON(&movie)

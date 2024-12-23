@@ -75,6 +75,53 @@ paths:
       summary: 用户登录
       tags:
       - 登录
+  /movie/info/{movie_id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取电影信息
+      parameters:
+      - description: 电影ID
+        in: path
+        name: movie_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: 获取电影信息
+      tags:
+      - 电影
+  /movie/list:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: string
+      - description: 每页数量
+        in: query
+        name: limit
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: 分页获取电影信息
+      tags:
+      - 电影
+  /movie/upload:
+    post:
+      consumes:
+      - application/json
+      description: 上传电影信息
+      produces:
+      - application/json
+      responses: {}
+      summary: 上传电影信息
+      tags:
+      - 电影
   /oss/upload/applayUpload:
     post:
       consumes:

@@ -45,6 +45,76 @@
                 }
             }
         },
+        "/movie/info/{movie_id}": {
+            "get": {
+                "description": "获取电影信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "电影"
+                ],
+                "summary": "获取电影信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "电影ID",
+                        "name": "movie_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/movie/list": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "电影"
+                ],
+                "summary": "分页获取电影信息",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "每页数量",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/movie/upload": {
+            "post": {
+                "description": "上传电影信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "电影"
+                ],
+                "summary": "上传电影信息",
+                "responses": {}
+            }
+        },
         "/oss/upload/applayUpload": {
             "post": {
                 "consumes": [
