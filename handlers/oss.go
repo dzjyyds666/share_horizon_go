@@ -89,7 +89,7 @@ func Decrypt(ciphertextBase64, key []byte) ([]byte, error) {
 // @Param X-Oss-BucketId header string true "Bucket名称"
 // @Param X-Oss-DirectoryId header string true "目录ID"
 // @Success 200 {object} response.Result "登录成功"
-// @Router /upload/applayUpload [post]
+// @Router /oss/upload/applayUpload [post]
 func ApplayUpload(ctx *gin.Context) {
 	userId, _ := ctx.Get("user_id")
 	var userInfo *models.UserInfo
@@ -161,7 +161,7 @@ func ApplayUpload(ctx *gin.Context) {
 // @Param fid path string true "fid"
 // @Param file_name formData string true "file_name"
 // @Param file formData file true "file"
-// @Router /upload/putFile/{fid} [post]
+// @Router /oss/upload/putFile/{fid} [post]
 func PutFile(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
 	if err != nil {
@@ -225,7 +225,7 @@ func PutFile(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param uploadInfo body aws.UploadInfo true "uploadInfo"
-// @Router /upload/initMultipartUpload [post]
+// @Router /oss/upload/initMultipartUpload [post]
 func InitMultipartFile(ctx *gin.Context) {
 	var uploadInfo aws.UploadInfo
 	err := ctx.ShouldBindJSON(&uploadInfo)
@@ -302,7 +302,7 @@ func InitMultipartFile(ctx *gin.Context) {
 // @Param X-Oss-UploadKey header string true "upload_key"
 // @Param content_length query string true "content_length"
 // @Param part_number query string true "part_number"
-// @Router /upload/multipart/{fid} [post]
+// @Router /oss/upload/multipart/{fid} [post]
 func MultipartUploadFile(ctx *gin.Context) {
 	key := ctx.GetHeader(aws.OssHeaders.UploadKey.ToString())
 	uploadId := ctx.GetHeader(aws.OssHeaders.UploadId.ToString())
@@ -412,7 +412,7 @@ func MultipartUploadFile(ctx *gin.Context) {
 // @Param X-Oss-UploadId header string true "upload_id"
 // @Param X-Oss-UploadKey header string true "upload_key"
 // @Param fid path string true "fid"
-// @Router /upload/multipart/complete/{fid} [post]
+// @Router /oss/upload/multipart/complete/{fid} [post]
 func CompleteMultipartUpload(ctx *gin.Context) {
 	// 需要completedParts []*types.CompletedPart, client *s3.Client, key, bucket, uploadId string
 	uploadId := ctx.GetHeader(aws.OssHeaders.UploadId.ToString())
@@ -543,7 +543,7 @@ func deleteRedisKey(prefix, key string) {
 // @Tags 文件上传
 // @Param X-Oss-UploadId header string true "upload_id"
 // @Param fid path string true "fid"
-// @Router /upload/multipart/abort/{fid} [post]
+// @Router /oss/upload/multipart/abort/{fid} [post]
 func AbortMultipartUpload(ctx *gin.Context) {
 
 	uploadId := ctx.GetHeader(aws.OssHeaders.UploadId.ToString())

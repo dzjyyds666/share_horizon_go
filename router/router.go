@@ -21,24 +21,30 @@ func InitRouter(c *gin.Engine) {
 			public.POST("/register", handlers.Register)
 			public.GET("/sendEmail", handlers.SendVerifyCode)
 			public.GET("/getCaptcha", handlers.GetCaptchaCode)
-		}
 
-		//test := v1.Group("/test")
-		//{
-		//	//test.GET("/getFileInfo", handlers.GetFileInfoTest)
-		//}
+			movie := public.Group("/movie")
+			{
+				movie.GET("/list", handlers.GetMovieInfoPage)
+				movie.GET("/info/:movie_id", handlers.GetMovieInfo)
+				movie.POST("/upload", handlers.UploadMovieInfo)
+			}
+		}
 
 		auth := v1.Group("")
 		auth.Use(middlewares.TokenVerify())
 		{
 			auth.GET("/logout", handlers.Logout)
-			auth.GET("/applayUpload", handlers.ApplayUpload)
-			auth.POST("/upload/applayUpload", handlers.ApplayUpload)
-			auth.POST("/upload/putFile/:fid", handlers.PutFile)
-			auth.POST("/upload/initMultipartUpload", handlers.InitMultipartFile)
-			auth.POST("/upload/multipart/:fid", handlers.MultipartUploadFile)
-			auth.POST("/upload/multipart/complete/:fid", handlers.CompleteMultipartUpload)
-			auth.POST("/upload/multipart/abort/:fid", handlers.AbortMultipartUpload)
+
+			oss := auth.Group("/oss")
+			{
+				oss.GET("/applayUpload", handlers.ApplayUpload)
+				oss.POST("/upload/applayUpload", handlers.ApplayUpload)
+				oss.POST("/upload/putFile/:fid", handlers.PutFile)
+				oss.POST("/upload/initMultipartUpload", handlers.InitMultipartFile)
+				oss.POST("/upload/multipart/:fid", handlers.MultipartUploadFile)
+				oss.POST("/upload/multipart/complete/:fid", handlers.CompleteMultipartUpload)
+				oss.POST("/upload/multipart/abort/:fid", handlers.AbortMultipartUpload)
+			}
 		}
 	}
 

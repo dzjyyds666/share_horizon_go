@@ -75,7 +75,7 @@ paths:
       summary: 用户登录
       tags:
       - 登录
-  /upload/applayUpload:
+  /oss/upload/applayUpload:
     post:
       consumes:
       - application/json
@@ -105,7 +105,7 @@ paths:
       summary: 申请上传文件
       tags:
       - 文件上传
-  /upload/initMultipartUpload:
+  /oss/upload/initMultipartUpload:
     post:
       consumes:
       - application/json
@@ -123,7 +123,7 @@ paths:
       summary: 初始化分片上传
       tags:
       - 文件上传
-  /upload/multipart/{fid}:
+  /oss/upload/multipart/{fid}:
     post:
       consumes:
       - multipart/form-data
@@ -165,7 +165,7 @@ paths:
       summary: 分片上传
       tags:
       - 文件上传
-  /upload/multipart/abort/{fid}:
+  /oss/upload/multipart/abort/{fid}:
     post:
       description: 中断分片上传
       parameters:
@@ -183,7 +183,7 @@ paths:
       summary: 中断分片上传
       tags:
       - 文件上传
-  /upload/multipart/complete/{fid}:
+  /oss/upload/multipart/complete/{fid}:
     post:
       description: 完成分片上传
       parameters:
@@ -206,7 +206,7 @@ paths:
       summary: 完成分片上传
       tags:
       - 文件上传
-  /upload/putFile/{fid}:
+  /oss/upload/putFile/{fid}:
     post:
       consumes:
       - multipart/form-data

@@ -51,7 +51,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/upload/applayUpload": {
+        "/oss/upload/applayUpload": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -96,7 +96,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/upload/initMultipartUpload": {
+        "/oss/upload/initMultipartUpload": {
             "post": {
                 "description": "初始化分片上传",
                 "consumes": [
@@ -123,7 +123,7 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/upload/multipart/abort/{fid}": {
+        "/oss/upload/multipart/abort/{fid}": {
             "post": {
                 "description": "中断分片上传",
                 "tags": [
@@ -149,7 +149,7 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/upload/multipart/complete/{fid}": {
+        "/oss/upload/multipart/complete/{fid}": {
             "post": {
                 "description": "完成分片上传",
                 "tags": [
@@ -182,7 +182,7 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/upload/multipart/{fid}": {
+        "/oss/upload/multipart/{fid}": {
             "post": {
                 "description": "分片上传",
                 "consumes": [
@@ -242,7 +242,7 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/upload/putFile/{fid}": {
+        "/oss/upload/putFile/{fid}": {
             "post": {
                 "description": "直接上传文件",
                 "consumes": [

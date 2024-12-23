@@ -35,7 +35,7 @@ func InitMySQL() {
 
 	logx.GetLogger("SH").Info("Database|MySqlConnect|SUCC")
 
-	err = MyDB.AutoMigrate(&models.UserInfo{})
+	err = MyDB.AutoMigrate(&models.UserInfo{}, &models.MovieInfo{}, &models.VideoType{}) // 创建表
 	if err != nil {
 		logx.GetLogger("SH").Errorf("Database|MySqlAuToMigraye|Error|%v", err)
 		os.Exit(1)
